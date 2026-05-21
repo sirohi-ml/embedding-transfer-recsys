@@ -1,6 +1,6 @@
 # Embedding Transfer in Recommendation Systems
 
-**From OHE to Embeddings: What Actually Moves the Needle in Recommendation Systems**
+**From OHE to Embeddings: What Meaningfully Changes Performance in Recommendation Systems**
 
 A systematic study of ANN-learned categorical embedding transfer to classical recommendation models across three datasets and four algorithms.
 
@@ -61,7 +61,7 @@ The progression from metadata-rich to interaction-only to geographically-structu
 | XGBoost | 0.9394 | 0.9319 | **0.9274** | **0.9274** |
 | ANN | 0.9338 | 0.9333 | 0.9300 | 0.9300 |
 
-The total improvement range across all conditions and all algorithms was 0.006 to 0.036 RMSE. XGBoost won at 0.9274 but barely edged out the competition. This is the feature ceiling effect. MovieLens models already know a movie's IMDB rating, box office budget, and genre. Once that information is in the feature set, encoding strategy and algorithm choice have diminishing returns.
+The total improvement range across all conditions and all algorithms was 0.0038 to 0.0362 RMSE. XGBoost won at 0.9274 but barely edged out the competition. This is the feature ceiling effect. MovieLens models already know a movie's IMDB rating, box office budget, and genre. Once that information is in the feature set, encoding strategy and algorithm choice have diminishing returns.
 
 ### Amazon Product Reviews (500K sample)
 
@@ -72,7 +72,7 @@ The total improvement range across all conditions and all algorithms was 0.006 t
 | XGBoost | 1.4942 | 1.4764 | **1.3579** | **1.3579** |
 | ANN | 1.4746 | 1.3971 | 1.3729 | 1.3729 |
 
-The total improvement range here is 0.1933. That is ten times larger than MovieLens. Random Forest went from 1.5559 to 1.3626, almost entirely because Optuna found appropriate depth constraints. The default max_depth=None setting had been causing catastrophic memorisation. Linear Regression barely moved (1.3646 to 1.3644 across all three experiments).
+The total improvement range here is 0.1933. That is ten times larger than MovieLens. Random Forest went from 1.5559 to 1.3626, largely because Optuna found appropriate depth constraints. The default max_depth=None setting had been causing severe memorisation. Linear Regression barely moved (1.3646 to 1.3644 across all three experiments).
 
 ### Yelp Academic Dataset (100K sample)
 
@@ -85,7 +85,7 @@ The total improvement range here is 0.1933. That is ten times larger than MovieL
 
 *RF baseline used constrained hyperparameters (max_depth=15, max_features=sqrt, max_samples=0.5) for computational feasibility with the approximately 1,944-column sparse OHE baseline matrix.
 
-Two things stand out. The ANN improved by 0.3299 from baseline to embeddings. Replacing the 1,944-column OHE matrix with 58 dense embedding features eliminated the overfitting entirely. That is the largest single improvement in the whole study. Second, Linear Regression won overall at 1.5526. On 70,000 training rows, the simplest well-regularised model generalised best.
+Two things stand out. The ANN improved by 0.3299 from baseline to embeddings. Replacing the 1,944-column OHE matrix with 58 dense embedding features dramatically reduced the overfitting. That is the largest single improvement in the whole study. Second, Linear Regression won overall at 1.5526. On 70,000 training rows, the simplest well-regularised model generalised best.
 
 ---
 
@@ -105,9 +105,9 @@ XGBoost won on the two larger datasets. Linear Regression won on the smallest. O
 
 **Linear Regression** showed small but consistent improvement across all datasets: 0.0088 on MovieLens, 0.0001 on Amazon, 0.0146 on Yelp. These are real but consistently much smaller than ANN improvement on the same datasets. Embedding space encodes relational proximity. Similar businesses cluster together. Users with similar tastes cluster together. Linear Regression can access the coordinates of each point in that space but has limited capacity to exploit the proximity structure. Acting on cluster membership requires non-linear decision boundaries.
 
-**Tree models** showed the most variable results. On Amazon, Random Forest improved by 0.1933 overall, but most of that came from Optuna correcting the default max_depth=None setting, not from embeddings. On Yelp, embeddings made RF worse (1.5831 to 1.7030) before Optuna fixed it. The pattern is consistent: embeddings plus poor hyperparameters can be worse than OHE plus poor hyperparameters. Dense, information-rich features give trees more to memorise when depth is unconstrained.
+**Tree models** showed the most variable results. On Amazon, Random Forest improved by 0.1933 overall, but most of that came from Optuna correcting the default max_depth=None setting, not from embeddings. On Yelp, embeddings made RF worse (1.5831 to 1.7030) before Optuna fixed it. Tree models often benefited more from optimisation than from embeddings alone, and on Yelp embeddings initially worsened performance before tuning corrected it. Dense, information-rich features give trees more to memorise when depth is unconstrained.
 
-**The ANN** benefited most, but the mechanism is different from classical models. For Linear Regression and XGBoost, Experiment 2 is genuine cross-model transfer: they receive pre-computed embeddings from a different architecture and use them as static features. For the ANN, Experiment 2 is representation substitution. Sparse OHE inputs are replaced with learned dense inputs in the same architecture. The improvement scaled with how badly the OHE baseline was causing problems: MovieLens (+0.0005), Amazon (+0.0775), Yelp (+0.3299).
+**The ANN** benefited most, but the mechanism is different from classical models. For Linear Regression and XGBoost, Experiment 2 is genuine cross-model transfer. They receive pre-computed embeddings from a different architecture and use them as static features. For the ANN, Experiment 2 is representation substitution. Sparse OHE inputs are replaced with learned dense inputs in the same architecture. The improvement scaled with how badly the OHE baseline was causing problems: MovieLens (+0.0005), Amazon (+0.0775), Yelp (+0.3299).
 
 ---
 
@@ -115,7 +115,7 @@ XGBoost won on the two larger datasets. Linear Regression won on the smallest. O
 
 1. LR improvement from embeddings was consistently small, always smaller than ANN improvement on the same dataset by at least an order of magnitude.
 
-2. Tree model benefit from embeddings was conditional on hyperparameter regularisation. On none of the three datasets did embeddings alone improve a tree model without tuning.
+2. Tree model benefit from embeddings was conditional on hyperparameter regularisation.
 
 3. ANN benefit scaled with baseline overfitting severity, not with dataset size or metadata richness.
 
@@ -124,91 +124,3 @@ XGBoost won on the two larger datasets. Linear Regression won on the smallest. O
 ## A Critical Engineering Detail
 
 For Amazon and Yelp, all interaction-derived features use Leave-One-Out (LOO) aggregation. The naive approach computes a user's average rating across all their training reviews and merges it back onto those same rows. The initial Amazon version had Train RMSE 0.04 and Test RMSE 1.70 from this alone. LOO excludes each row's own rating from the aggregate it receives as a feature. This is not optional.
-
----
-
-## Repo Structure
-
-```
-embedding-transfer-recsys/
-│
-├── movielens/
-│   ├── notebooks/          <- numbered notebooks 00 through 05
-│   └── results/            <- JSON + CSV results from each run
-│
-├── amazon/
-│   ├── notebooks/
-│   └── results/
-│
-├── yelp/
-│   ├── notebooks/
-│   └── results/
-│
-├── paper/
-│   ├── TDS_Article.pdf     <- Towards Data Science article
-│   ├── ArXiv_Paper.pdf     <- Formal research paper
-│   └── Decision_Log.pdf    <- Full decision log with every bug and fix
-│
-├── results/
-│   ├── Personalization_MovieLens_Final.xlsx
-│   ├── Personalization_Amazon_Final.xlsx
-│   └── Personalization_Yelp_Final.xlsx
-│
-├── README.md
-├── requirements.txt
-├── SETUP.md
-└── .gitignore
-```
-
----
-
-## Datasets
-
-All datasets are publicly available. Data files are excluded from this repository via `.gitignore`. See `SETUP.md` for download and setup instructions.
-
-| Dataset | Source | Download |
-|---------|--------|----------|
-| MovieLens 20M | GroupLens | [grouplens.org](https://grouplens.org/datasets/movielens/20m/) |
-| Amazon Product Reviews | Kaggle | [kaggle.com](https://www.kaggle.com/datasets/saurav9786/amazon-product-reviews) |
-| Yelp Academic Dataset | Kaggle | [kaggle.com](https://www.kaggle.com/datasets/yelp-dataset/yelp-dataset) |
-
----
-
-## Quickstart
-
-```bash
-git clone https://github.com/sirohi-ml/embedding-transfer-recsys.git
-cd embedding-transfer-recsys
-pip install -r requirements.txt
-nbstripout --install
-```
-
-Run notebooks in order within each dataset. See `SETUP.md` for full instructions.
-
----
-
-## Citation
-
-```bibtex
-@misc{sirohi2026embeddings,
-  title  = {Embeddings as a Bridge Between Neural and Classical Models:
-             A Systematic Study of Representation Transfer in
-             Tabular Recommendation Systems},
-  author = {Sirohi, Shivanshu},
-  year   = {2026},
-  url    = {https://github.com/sirohi-ml/embedding-transfer-recsys}
-}
-```
-
----
-
-## Author
-
-**Shivanshu Sirohi**
-GitHub: [@sirohi-ml](https://github.com/sirohi-ml)
-
----
-
-## License
-
-MIT License. See [LICENSE](LICENSE) for details.
